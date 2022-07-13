@@ -1,5 +1,6 @@
 from flask import Flask
 import pika
+from random import randint
 
 app=Flask(__name__)
 class MetaClass(type):
@@ -14,7 +15,7 @@ class MetaClass(type):
        
         
 class RabbitConfig(metaclass=MetaClass):
-    def __init__(self, exchange="ex-manually", host="localhost", queue="test", routing_key="test"):
+    def __init__(self, exchange="", host="localhost", queue="test", routing_key="test"):
         self.exchange = exchange
         self.host = host
         self.queue = queue
@@ -41,15 +42,16 @@ class RabbitService():
                             )
         print("Published message.....")
         
-    # def exit(self):
+    def exit(self):
         self._connection.close()
         
 @app.route("/app")
 def called_fun():
-    config = RabbitConfig(exchange="ex-manually", host="localhost", queue="test", routing_key="test")
+    config = RabbitConfig(exchange="", host="localhost", queue="random_test", routing_key="")
     server = RabbitService(config)
-    server.rabbit_message({"data":"message came from server"})
-    print("Published message.....")
+    for i in range(0,20000):
+        server.rabbit_message({"data":f"Index No.{i}: {randint(0,10000)} "})
+        print("Published message.....")
     return "Published message....."
     
 

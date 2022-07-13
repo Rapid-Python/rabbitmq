@@ -1,5 +1,6 @@
 # from flask import Flask
 import pika
+import time
 
 class MetaClass(type):
     _instance = {}
@@ -21,8 +22,9 @@ class RabbitReceiver(metaclass=MetaClass):
         self._channel.queue_declare(queue=self.queue, durable=True)
         
     def callback(self, ch, method, properties, body):
-        print(" Received msg %s" % body.decode())
-        print(" Done")
+        print(" [x] Received %r" % body.decode())
+        # time.sleep(body.count(b'.') )
+        print(" [x] Done")
         ch.basic_ack(delivery_tag=method.delivery_tag)
         
     def start_consume(self):        
@@ -32,5 +34,5 @@ class RabbitReceiver(metaclass=MetaClass):
         
                 
 if __name__=="__main__":
-    ser = RabbitReceiver(queue="test", host="localhost")
+    ser = RabbitReceiver(queue="random_test", host="localhost")
     ser.start_consume()

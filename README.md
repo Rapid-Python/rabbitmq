@@ -18,19 +18,19 @@ $ docker-compose up -d
 
 ```
 
-## TO run worker
+## To run worker
 ```bash
 $ python3 worker/app.py
 
 ```
 
-## TO run server
+## To run server
 ```bash
 $ python3 server/app.py
 
 ```
 
-## TO publish message from server
+## To publish message from server
 ```bash
 $  localhost:8000/app/
 
