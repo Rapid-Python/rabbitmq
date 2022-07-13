@@ -15,7 +15,7 @@ class MetaClass(type):
        
         
 class RabbitConfig(metaclass=MetaClass):
-    def __init__(self, exchange="", host="localhost", queue="test", routing_key="test"):
+    def __init__(self, exchange="", host="localhost", queue="random_test", routing_key="random_test"):
         self.exchange = exchange
         self.host = host
         self.queue = queue
@@ -28,13 +28,14 @@ class RabbitService():
             pika.ConnectionParameters(host=self.config.host)
             )
         self._channel = self._connection.channel()
-        self._channel.queue_declare(self.config.queue, durable=True)
+        self._channel.queue_declare(queue=self.config.queue, durable=True)
+           
           
     def rabbit_message(self, payload={}):
         print("Publishing message.....")
         self._channel.basic_publish(
                                 exchange=self.config.exchange,
-                                routing_key=self.config.routing_key,
+                                routing_key=self.config.queue,
                                 body=str(payload),
                                 properties=pika.BasicProperties(
                                     delivery_mode=2 # make msg persistent
@@ -47,9 +48,9 @@ class RabbitService():
         
 @app.route("/app")
 def called_fun():
-    config = RabbitConfig(exchange="", host="localhost", queue="random_test", routing_key="")
+    config = RabbitConfig(exchange="", host="localhost", queue="random_test", routing_key="random_test")
     server = RabbitService(config)
-    for i in range(0,20000):
+    for i in range(0,10):
         server.rabbit_message({"data":f"Index No.{i}: {randint(0,10000)} "})
         print("Published message.....")
     return "Published message....."
