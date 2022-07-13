@@ -2,31 +2,58 @@ from flask import Flask
 import pika
 
 app=Flask(__name__)
-
-@app.route("/")
-def hello():
-    return "successfully working flask"
-
-@app.route("/rabbit/<message>")
-def rabbit_fun(message):
-    try:
-        connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
-    except pika.exceptions.AMQPConnectionError as exc:
-        print("Failed to connect to RabbitMQ service. Message wont be sent.")
+class MetaClass(type):
+    _instance = {}
+    
+    def __call__(cls, *args, **kwargs):
+        """ Singleton class called """
+        if cls not in cls._instance:
+            print("inside")
+            cls._instance[cls] = super(MetaClass, cls).__call__()
+        return cls._instance[cls]
+       
         
-    channel = connection.channel()
-    channel.queue_declare(queue="test", durable=True)
-    channel.basic_publish(
-        exchange='',
-        routing_key='test',
-        body=message,
-        properties=pika.BasicProperties(
-            delivery_mode=2 # make msg persistent
-        )
-    )
-    connection.close()
-    return "success fully sent message"
+class RabbitConfig(metaclass=MetaClass):
+    def __init__(self, exchange="ex-manually", host="localhost", queue="test", routing_key="test"):
+        self.exchange = exchange
+        self.host = host
+        self.queue = queue
+        self.routing_key = routing_key
+
+class RabbitService():
+    def __init__(self, config):
+        self.config = config
+        self._connection = pika.BlockingConnection(
+            pika.ConnectionParameters(host=self.config.host)
+            )
+        self._channel = self._connection.channel()
+        self._channel.queue_declare(self.config.queue, durable=True)
+          
+    def rabbit_message(self, payload={}):
+        print("Publishing message.....")
+        self._channel.basic_publish(
+                                exchange=self.config.exchange,
+                                routing_key=self.config.routing_key,
+                                body=str(payload),
+                                properties=pika.BasicProperties(
+                                    delivery_mode=2 # make msg persistent
+                                )
+                            )
+        print("Published message.....")
+        
+    # def exit(self):
+        self._connection.close()
+        
+@app.route("/app")
+def called_fun():
+    config = RabbitConfig(exchange="ex-manually", host="localhost", queue="test", routing_key="test")
+    server = RabbitService(config)
+    server.rabbit_message({"data":"message came from server"})
+    print("Published message.....")
+    return "Published message....."
+    
 
 if __name__=="__main__":
+    
     app.run(debug=True, host='0.0.0.0')
 

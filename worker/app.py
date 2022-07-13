@@ -1,23 +1,36 @@
-from multiprocessing import connection
+# from flask import Flask
 import pika
 
-
-print("connection server to deliver message...........")
-try:
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
-except pika.exceptions.AMQPConnectionError as exc:
-        print("Failed to connect to RabbitMQ service. Message wont be sent.")
-        
-channel = connection.channel()
-channel.queue_declare(queue="test", durable=True)
-
-print(' Waiting for messages...')
-def callback(ch, method, properties, body):
-    print(" Received msg %s" % body.decode())
-    print(" Done")
+class MetaClass(type):
+    _instance = {}
     
-    ch.basic_ack(delivery_tag=method.delivery_tag)
-
-channel.basic_qos(prefetch_count=1)
-channel.basic_consume(queue='test', on_message_callback=callback)
-channel.start_consuming()
+    def __call__(cls, *args, **kwargs):
+        """ Singleton class called """
+        if cls not in cls._instance:
+            cls._instance[cls] = super(MetaClass, cls).__call__()
+            return cls._instance[cls]
+        
+print("app called..")
+class RabbitReceiver(metaclass=MetaClass):
+    def __init__(self, queue="test", host="localhost"):
+        print("init.......")
+        self.host = host
+        self.queue = queue
+        self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=self.host))
+        self._channel = self._connection.channel()
+        self._channel.queue_declare(queue=self.queue, durable=True)
+        
+    def callback(self, ch, method, properties, body):
+        print(" Received msg %s" % body.decode())
+        print(" Done")
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        
+    def start_consume(self):        
+        self._channel.basic_qos(prefetch_count=1)
+        self._channel.basic_consume(queue=self.queue, on_message_callback=self.callback)
+        self._channel.start_consuming()   
+        
+                
+if __name__=="__main__":
+    ser = RabbitReceiver(queue="test", host="localhost")
+    ser.start_consume()
